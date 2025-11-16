@@ -1,5 +1,5 @@
 {
-  "name": "rn-apns-device-token",
+  "name": "rn-apns",
   "version": "0.1.0",
   "main": "index.js",
   "react-native": "index.js",
