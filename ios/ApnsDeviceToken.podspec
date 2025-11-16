@@ -1,16 +1,21 @@
+require 'json'
+
+package = JSON.parse(File.read(File.join(__dir__, '..', 'package.json')))
+
 Pod::Spec.new do |s|
   s.name         = "ApnsDeviceToken"
-  s.version      = "0.1.0"
-  s.summary      = "APNs device token for React Native"
-  s.license      = "MIT"
-  s.author       = { "You" => "you@example.com" }
-  s.homepage     = "https://github.com/you/rn-apns-device-token"
+  s.version      = package["version"]
+  s.summary      = package["description"] || "APNs device token for React Native"
+  s.homepage     = "https://github.com/hiro2k-dev/rn-apns"
+  s.license      = { :type => "MIT", :text => "MIT" }
+  s.author       = { "hiro2k" => "you@example.com" }
+
   s.platform     = :ios, "13.0"
 
-  s.source       = { :git => "https://github.com/you/rn-apns-device-token.git", :tag => s.version.to_s }
-  s.source_files = "ios/**/*.{h,m,mm,swift}"
+  s.source       = { :path => "." }
 
+  s.source_files = "ApnsDeviceToken.swift"
+
+  s.dependency   "React-Core"
   s.swift_version = "5.0"
-
-  s.dependency "React-Core"
 end
