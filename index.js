@@ -2,9 +2,12 @@ import { NativeModules } from "react-native";
 
 const { ApnsDeviceToken } = NativeModules;
 
+// Named export
 export function getApnsDeviceToken() {
-  console.log("NativeModules.ApnsDeviceToken =", ApnsDeviceToken);
   return ApnsDeviceToken.getDeviceToken();
 }
 
-export default { getApnsDeviceToken };
+// Optional default export
+export default {
+  getApnsDeviceToken,
+};

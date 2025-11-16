@@ -4,27 +4,38 @@ import UserNotifications
 import React
 
 @objc(ApnsDeviceToken)
-class ApnsDeviceToken: NSObject {
+public final class ApnsDeviceToken: NSObject, RCTBridgeModule {
+
+  // MARK: - RCTBridgeModule
 
   @objc
-  static func requiresMainQueueSetup() -> Bool {
-    return true
+  public static func moduleName() -> String! {
+    "ApnsDeviceToken"
   }
 
-  static var shared: ApnsDeviceToken?
+  @objc
+  public static func requiresMainQueueSetup() -> Bool {
+    true
+  }
+
+  // MARK: - Shared state
+
+  public static var shared: ApnsDeviceToken?
 
   private var pendingResolver: RCTPromiseResolveBlock?
   private var pendingRejecter: RCTPromiseRejectBlock?
   private var cachedToken: String?
 
-  override init() {
+  public override init() {
     super.init()
     ApnsDeviceToken.shared = self
   }
 
-  @objc
-  func getDeviceToken(_ resolve: @escaping RCTPromiseResolveBlock,
-                      rejecter reject: @escaping RCTPromiseRejectBlock) {
+  // MARK: - JS API
+
+  @objc(getDeviceToken:rejecter:)
+  public func getDeviceToken(_ resolve: @escaping RCTPromiseResolveBlock,
+                             rejecter reject: @escaping RCTPromiseRejectBlock) {
 
     if let token = cachedToken {
       resolve(token)
@@ -59,8 +70,10 @@ class ApnsDeviceToken: NSObject {
     pendingRejecter = nil
   }
 
+  // MARK: - App Delegate Callbacks
+
   @objc
-  static func didRegisterForRemoteNotifications(deviceToken: Data) {
+  public static func didRegisterForRemoteNotifications(deviceToken: Data) {
     let token = deviceToken.map { String(format: "%02.2hhx", $0) }.joined()
 
     DispatchQueue.main.async {
@@ -72,7 +85,7 @@ class ApnsDeviceToken: NSObject {
   }
 
   @objc
-  static func didFailToRegisterForRemoteNotifications(error: Error) {
+  public static func didFailToRegisterForRemoteNotifications(error: Error) {
     DispatchQueue.main.async {
       guard let shared = ApnsDeviceToken.shared else { return }
       shared.pendingRejecter?(
