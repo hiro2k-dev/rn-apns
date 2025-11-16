@@ -4,38 +4,27 @@ import UserNotifications
 import React
 
 @objc(ApnsDeviceToken)
-public final class ApnsDeviceToken: NSObject, RCTBridgeModule {
-
-  // MARK: - RCTBridgeModule
+class ApnsDeviceToken: NSObject {
 
   @objc
-  public static func moduleName() -> String! {
-    "ApnsDeviceToken"
+  static func requiresMainQueueSetup() -> Bool {
+    return true
   }
 
-  @objc
-  public static func requiresMainQueueSetup() -> Bool {
-    true
-  }
-
-  // MARK: - Shared state
-
-  public static var shared: ApnsDeviceToken?
+  static var shared: ApnsDeviceToken?
 
   private var pendingResolver: RCTPromiseResolveBlock?
   private var pendingRejecter: RCTPromiseRejectBlock?
   private var cachedToken: String?
 
-  public override init() {
+  override init() {
     super.init()
     ApnsDeviceToken.shared = self
   }
 
-  // MARK: - JS API
-
-  @objc(getDeviceToken:rejecter:)
-  public func getDeviceToken(_ resolve: @escaping RCTPromiseResolveBlock,
-                             rejecter reject: @escaping RCTPromiseRejectBlock) {
+  @objc
+  func getDeviceToken(_ resolve: @escaping RCTPromiseResolveBlock,
+                      rejecter reject: @escaping RCTPromiseRejectBlock) {
 
     if let token = cachedToken {
       resolve(token)
@@ -70,10 +59,8 @@ public final class ApnsDeviceToken: NSObject, RCTBridgeModule {
     pendingRejecter = nil
   }
 
-  // MARK: - App Delegate Callbacks
-
   @objc
-  public static func didRegisterForRemoteNotifications(deviceToken: Data) {
+  static func didRegisterForRemoteNotifications(deviceToken: Data) {
     let token = deviceToken.map { String(format: "%02.2hhx", $0) }.joined()
 
     DispatchQueue.main.async {
@@ -85,7 +72,7 @@ public final class ApnsDeviceToken: NSObject, RCTBridgeModule {
   }
 
   @objc
-  public static func didFailToRegisterForRemoteNotifications(error: Error) {
+  static func didFailToRegisterForRemoteNotifications(error: Error) {
     DispatchQueue.main.async {
       guard let shared = ApnsDeviceToken.shared else { return }
       shared.pendingRejecter?(
