@@ -4,21 +4,12 @@ import UserNotifications
 import React
 
 @objc(ApnsDeviceToken)
-public final class ApnsDeviceToken: NSObject, RCTBridgeModule {
-
-  // MARK: - RCTBridgeModule
-
-  @objc
-  public static func moduleName() -> String! {
-    "ApnsDeviceToken"
-  }
+public class ApnsDeviceToken: NSObject {
 
   @objc
   public static func requiresMainQueueSetup() -> Bool {
-    true
+    return true
   }
-
-  // MARK: - Shared state
 
   public static var shared: ApnsDeviceToken?
 
@@ -31,9 +22,8 @@ public final class ApnsDeviceToken: NSObject, RCTBridgeModule {
     ApnsDeviceToken.shared = self
   }
 
-  // MARK: - JS API
-
-  @objc(getDeviceToken:rejecter:)
+  // JS: NativeModules.ApnsDeviceToken.getDeviceToken()
+  @objc
   public func getDeviceToken(_ resolve: @escaping RCTPromiseResolveBlock,
                              rejecter reject: @escaping RCTPromiseRejectBlock) {
 
@@ -69,8 +59,6 @@ public final class ApnsDeviceToken: NSObject, RCTBridgeModule {
     pendingResolver = nil
     pendingRejecter = nil
   }
-
-  // MARK: - App Delegate Callbacks
 
   @objc
   public static func didRegisterForRemoteNotifications(deviceToken: Data) {
