@@ -1,10 +1,11 @@
+//  ApnsDeviceToken.swift
 import Foundation
 import UIKit
 import UserNotifications
 import React
 
 @objc(ApnsDeviceToken)
-public class ApnsDeviceToken: NSObject {
+public class ApnsDeviceToken: NSObject, UNUserNotificationCenterDelegate {
 
   @objc
   public static func requiresMainQueueSetup() -> Bool {
@@ -17,12 +18,44 @@ public class ApnsDeviceToken: NSObject {
   private var pendingRejecter: RCTPromiseRejectBlock?
   private var cachedToken: String?
 
+  private var initialNotification: [String: Any]?
+  private var hasListeners = false
+
   public override init() {
     super.init()
     ApnsDeviceToken.shared = self
+
+    // Receive notifications in foreground
+    UNUserNotificationCenter.current().delegate = self
+
+    // Detect initial notification (when app cold start by tapping notification)
+    NotificationCenter.default.addObserver(
+      self,
+      selector: #selector(handleInitialNotification(_:)),
+      name: UIApplication.didFinishLaunchingNotification,
+      object: nil
+    )
   }
 
-  // JS: NativeModules.ApnsDeviceToken.getDeviceToken()
+  // MARK: - 1. REQUEST PERMISSIONS
+  @objc
+  public func requestPermissions(_ resolve: @escaping RCTPromiseResolveBlock,
+                                 rejecter reject: @escaping RCTPromiseRejectBlock) {
+
+    UNUserNotificationCenter.current().requestAuthorization(
+      options: [.alert, .badge, .sound]
+    ) { granted, error in
+      DispatchQueue.main.async {
+        if let error = error {
+          reject("E_PERMISSION", error.localizedDescription, error)
+          return
+        }
+        resolve(granted)
+      }
+    }
+  }
+
+  // MARK: - 2. GET DEVICE TOKEN (APNs)
   @objc
   public func getDeviceToken(_ resolve: @escaping RCTPromiseResolveBlock,
                              rejecter reject: @escaping RCTPromiseRejectBlock) {
@@ -35,24 +68,7 @@ public class ApnsDeviceToken: NSObject {
     pendingResolver = resolve
     pendingRejecter = reject
 
-    let center = UNUserNotificationCenter.current()
-    center.requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
-      DispatchQueue.main.async {
-        if let error = error {
-          reject("E_PERMISSION", error.localizedDescription, error)
-          self.clearPending()
-          return
-        }
-
-        guard granted else {
-          reject("E_PERMISSION_DENIED", "Notification permission not granted", nil)
-          self.clearPending()
-          return
-        }
-
-        UIApplication.shared.registerForRemoteNotifications()
-      }
-    }
+    UIApplication.shared.registerForRemoteNotifications()
   }
 
   private func clearPending() {
@@ -83,5 +99,51 @@ public class ApnsDeviceToken: NSObject {
       )
       shared.clearPending()
     }
+  }
+
+  // MARK: - 3. INITIAL NOTIFICATION
+  @objc
+  public func getInitialNotification(_ resolve: RCTPromiseResolveBlock,
+                                     rejecter reject: RCTPromiseRejectBlock) {
+    resolve(initialNotification)
+  }
+
+  @objc
+  private func handleInitialNotification(_ notification: Notification) {
+    if let userInfo = notification.userInfo?[UIApplication.LaunchOptionsKey.remoteNotification] as? [String: Any] {
+      initialNotification = userInfo
+    }
+  }
+
+  // MARK: - 4. EVENT LISTENER (Foreground push)
+  @objc
+  public func addListener(_ eventName: NSString) {
+    hasListeners = true
+  }
+
+  @objc
+  public func removeListeners(_ count: NSNumber) {
+    hasListeners = false
+  }
+
+  // Foreground push (app đang mở)
+  public func userNotificationCenter(
+    _ center: UNUserNotificationCenter,
+    willPresent notification: UNNotification,
+    withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+  ) {
+
+    let payload = notification.request.content.userInfo
+
+    if hasListeners {
+      NotificationCenter.default.post(
+        name: NSNotification.Name("ApnsDeviceToken_NotificationReceived"),
+        object: nil,
+        userInfo: payload
+      )
+    }
+
+    // show banner + sound + badge
+    completionHandler([.alert, .badge, .sound])
   }
 }
